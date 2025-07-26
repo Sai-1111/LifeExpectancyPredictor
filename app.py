@@ -51,8 +51,14 @@ for col in X.columns:
     
 
 # Make Prediction
-input_array = scaler.transform(imp.transform([user_input]))
-predicted_life_expectancy = model.predict(input_array)[0][0]
+user_df = pd.DataFrame([user_input], columns=X.columns)
+
+# Apply imputer and scaler
+user_imp = imp.transform(user_df)
+user_scaled = scaler.transform(user_imp)
+
+# Predict
+predicted_life_expectancy = model.predict(user_scaled)[0][0]
 
 st.success(f"🎯 Predicted Life Expectancy: **{predicted_life_expectancy:.2f} years**")
 
