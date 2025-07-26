@@ -16,7 +16,7 @@ st.title("🌍 Life Expectancy Predictor (with Pretrained ANN)")
 st.write("This app uses a pre-trained Keras regression model to predict life expectancy based on WHO health indicators.")
 
 # Preprocess
-df.dropna(subset=["Life expectancy"], inplace=True)
+df.dropna(subset=["Life Expectancy Data"], inplace=True)
 X = df.drop(["Country", "Year", "Life expectancy"], axis=1)
 y = df["Life expectancy"]
 
