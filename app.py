@@ -39,16 +39,16 @@ st.header("🔢 Enter values to predict life expectancy")
 user_input = []
 
 for col in X.columns:
-    col_min = float(df[col].min())
-    col_max = float(df[col].max())
-    col_mean = float(df[col].mean())
-    
     if col == "Status":
         status_val = st.selectbox("Status", ["Developed", "Developing"])
         user_input.append(0 if status_val == "Developed" else 1)
     else:
+        col_min = float(df[col].min())
+        col_max = float(df[col].max())
+        col_mean = float(df[col].mean())
         val = st.slider(col, col_min, col_max, float(col_mean))
         user_input.append(val)
+    
 
 # Make Prediction
 input_array = scaler.transform(imp.transform([user_input]))
