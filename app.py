@@ -17,8 +17,8 @@ st.write("This app uses a pre-trained Keras regression model to predict life exp
 
 # Preprocess
 df.dropna(subset=["Life Expectancy Data"], inplace=True)
-X = df.drop(["Country", "Year", "Life expectancy"], axis=1)
-y = df["Life expectancy"]
+X = df.drop(["Country", "Year", "Life Expectancy Data"], axis=1)
+y = df["Life Expectancy Data"]
 
 # Encode 'Status'
 le = LabelEncoder()
