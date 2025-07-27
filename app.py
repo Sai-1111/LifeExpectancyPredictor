@@ -1,67 +1,88 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-from tensorflow.keras.models import load_model
-from sklearn.preprocessing import LabelEncoder, MinMaxScaler
 from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import MinMaxScaler, LabelEncoder
+from tensorflow.keras.models import load_model
 
-# Load Data
-@st.cache_data
-def load_data():
-    df = pd.read_csv("Life Expectancy Data.csv")
-    return df
-
-df = load_data()
+# Title
+st.set_page_config(page_title="Life Expectancy Predictor", layout="centered")
 st.title("🌍 Life Expectancy Predictor (with Pretrained ANN)")
-st.write("This app uses a pre-trained Keras regression model to predict life expectancy based on WHO health indicators.")
+st.write("This app predicts life expectancy using a pre-trained Artificial Neural Network based on WHO data.")
 
-# Preprocess
-df.dropna(subset=["Life expectancy "], inplace=True)
-X = df.drop(["Country", "Year", "Life expectancy "], axis=1)
-y = df["Life expectancy "]
+# Load data
+df = pd.read_csv("Life Expectancy Data.csv")
+df.columns = df.columns.str.strip()  # Clean column names
 
-# Encode 'Status'
-le = LabelEncoder()
-X["Status"] = le.fit_transform(X["Status"])
-
-# Imputer & Scaler (fitted on entire dataset for consistent transform)
+# Imputation
 imp = SimpleImputer(strategy="mean")
-X_imp = imp.fit_transform(X)
+columns_to_impute = [
+    'Life expectancy ', 'Adult Mortality', 'Alcohol', 'Hepatitis B', ' BMI ', 'Polio',
+    'Total expenditure', 'Diphtheria ', 'GDP', 'Population', ' thinness  1-19 years',
+    ' thinness 5-9 years', 'Income composition of resources', 'Schooling'
+]
+df[columns_to_impute] = imp.fit_transform(df[columns_to_impute])
 
+# Encode Status
+le = LabelEncoder()
+df["Status"] = le.fit_transform(df["Status"])
+
+# Features and label
+X = df.drop(["Country", "Year", "Life expectancy "], axis=1)
+feature_names = X.columns.tolist()
+
+# Handle outliers (same as training)
+cols_to_handle_outliers = [
+    'Adult Mortality', 'infant deaths', 'Alcohol', 'percentage expenditure',
+    'Hepatitis B', 'Measles ', ' BMI ', 'under-five deaths ', 'Polio',
+    'Total expenditure', 'Diphtheria ', ' HIV/AIDS', 'GDP', 'Population',
+    ' thinness  1-19 years', ' thinness 5-9 years',
+    'Income composition of resources', 'Schooling'
+]
+for col in cols_to_handle_outliers:
+    q1 = df[col].quantile(0.25)
+    q3 = df[col].quantile(0.75)
+    iqr = q3 - q1
+    lower_bound = q1 - 1.5 * iqr
+    upper_bound = q3 + 1.5 * iqr
+    mean_val = df[col].mean()
+    df[col] = np.where((df[col] < lower_bound) | (df[col] > upper_bound), mean_val, df[col])
+
+# Scale
 scaler = MinMaxScaler()
-X_scaled = scaler.fit_transform(X_imp)
+X_scaled = scaler.fit_transform(X)
 
-# Load Pretrained Model
+# Load model
 model = load_model("regression_model.keras")
 
-# User Input Form
-st.header("🔢 Enter values to predict life expectancy")
-user_input = []
+# Streamlit UI
+st.header("🔢 Enter Health & Socioeconomic Indicators")
 
-for col in X.columns:
+user_input = []
+for col in feature_names:
+    col_min = float(df[col].min())
+    col_max = float(df[col].max())
+    col_mean = float(df[col].mean())
+
     if col == "Status":
-        status_val = st.selectbox("Status", ["Developed", "Developing"])
-        user_input.append(0 if status_val == "Developed" else 1)
+        val = st.selectbox("Status", ["Developed", "Developing"])
+        user_input.append(0 if val == "Developed" else 1)
     else:
-        col_min = float(df[col].min())
-        col_max = float(df[col].max())
-        col_mean = float(df[col].mean())
         val = st.slider(col, col_min, col_max, float(col_mean))
         user_input.append(val)
-    
 
-# Make Prediction
-user_df = pd.DataFrame([user_input], columns=X.columns)
+# Convert to DataFrame
+user_df = pd.DataFrame([user_input], columns=feature_names)
 
-# Apply imputer and scaler
-user_imp = imp.transform(user_df)
-user_scaled = scaler.transform(user_imp)
+# Preprocess user input
+user_scaled = scaler.transform(user_df)
 
 # Predict
-predicted_life_expectancy = model.predict(user_scaled)[0][0]
+prediction = model.predict(user_scaled)[0][0]
 
-st.success(f"🎯 Predicted Life Expectancy: **{predicted_life_expectancy:.2f} years**")
+# Display result
+st.success(f"🎯 Predicted Life Expectancy: **{prediction:.2f} years**")
 
-# Show Dataset Summary
-if st.checkbox("📊 Show Sample of Dataset"):
+# Optional: Show sample data
+if st.checkbox("📊 Show Sample Data"):
     st.dataframe(df.head())
